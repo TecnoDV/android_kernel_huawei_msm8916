@@ -69,3 +69,4 @@ obj-$(CONFIG_HUAWEI_APANIC)	+= huawei_apanic/
 obj-y				+= dsm/
 obj-$(CONFIG_HUAWEI_KSTATE) += hw_kstate/
 obj-$(CONFIG_UID_CPUTIME) += uid_cputime.o
+obj-$(CONFIG_ALSA_TO_H2W) += alsa-to-h2w-headset.o
