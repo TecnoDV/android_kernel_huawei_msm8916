@@ -856,11 +856,14 @@ static inline int adreno_is_a430(struct adreno_device *adreno_dev)
 	return (ADRENO_GPUREV(adreno_dev) == ADRENO_REV_A430);
 }
 
+<<<<<<< HEAD
 static inline int adreno_is_a430v2(struct adreno_device *adreno_dev)
 {
 	return ((ADRENO_GPUREV(adreno_dev) == ADRENO_REV_A430) &&
 		(ADRENO_CHIPID_PATCH(adreno_dev->chipid) == 1));
 }
+=======
+>>>>>>> f157e8a... msm: kgsl: Add support for A418 GPU for MSM8992
 static inline int adreno_is_a418(struct adreno_device *adreno_dev)
 {
 	return (ADRENO_GPUREV(adreno_dev) == ADRENO_REV_A418);
