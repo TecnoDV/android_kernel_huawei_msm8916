@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -37,11 +37,6 @@ enum wcd_mbhc_btn_det_mem {
 	WCD_MBHC_BTN_DET_V_BTN_HIGH
 };
 
-enum wcd_mbhc_event_state {
-	WCD_MBHC_EVENT_PA_HPHL,
-	WCD_MBHC_EVENT_PA_HPHR,
-};
-
 struct wcd_mbhc_btn_detect_cfg {
 	u8 num_btn;
 	s16 _v_btn_low[WCD_MBHC_DEF_BUTTONS];
@@ -70,6 +65,8 @@ struct wcd_mbhc_intr {
 struct wcd_mbhc_cb {
 	int (*enable_mb_source) (struct snd_soc_codec *, bool);
 	void (*trim_btn_reg) (struct snd_soc_codec *);
+	void (*compute_impedance) (s16 , s16 , uint32_t *, uint32_t *, bool);
+	void (*set_micbias_value) (struct snd_soc_codec *);
 };
 
 struct wcd_mbhc {
@@ -95,12 +92,12 @@ struct wcd_mbhc {
 	bool hs_detect_work_stop;
 	bool micbias_enable;
 	bool btn_press_intr;
+	bool is_hs_recording;
 
 	struct snd_soc_codec *codec;
 
 	/* track PA/DAC state to sync with userspace */
 	unsigned long hph_pa_dac_state;
-	unsigned long event_state;
 	unsigned long jiffies_atreport;
 
 	/* impedance of hphl and hphr */
@@ -113,6 +110,7 @@ struct wcd_mbhc {
 
 	/* Holds codec specific interrupt mapping */
 	const struct wcd_mbhc_intr *intr_ids;
+
 	/* Work to correct accessory type */
 	struct work_struct correct_plug_swch;
 	struct notifier_block nblock;
