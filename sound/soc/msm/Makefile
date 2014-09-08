@@ -87,6 +87,10 @@ obj-$(CONFIG_SND_SOC_MDM9630) += snd-soc-mdm9630.o
 snd-soc-msm8x16-objs := msm8x16.o msm8939-slimbus.o
 obj-$(CONFIG_SND_SOC_MSM8X16) += snd-soc-msm8x16.o
 
+# for MSM ferrum sound card driver
+snd-soc-msmferrum-objs := msm8x16.o
+obj-$(CONFIG_SND_SOC_MSMFERRUM) += snd-soc-msmferrum.o
+
 # for MSM PLUTONIUM sound card driver
 snd-soc-msmplutonium-objs := msmplutonium.o
 obj-$(CONFIG_SND_SOC_MSMPLUTONIUM) += snd-soc-msmplutonium.o
