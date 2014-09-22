@@ -294,7 +294,11 @@ static void msm_vfe47_init_hardware_reg(struct vfe_device *vfe_dev)
 	/* BUS_CFG */
 	msm_camera_io_w(0x00000001, vfe_dev->vfe_base + 0x84);
 	/* IRQ_MASK/CLEAR */
+<<<<<<< HEAD
 	msm_camera_io_w(0xE00000F1, vfe_dev->vfe_base + 0x5C);
+=======
+	msm_camera_io_w(0xE00000F3, vfe_dev->vfe_base + 0x5C);
+>>>>>>> 9ab3873... msm: camera: isp: Add 14 bit pipeline support in ISP
 	msm_camera_io_w_mb(0xE1FFFFFF, vfe_dev->vfe_base + 0x60);
 	msm_camera_io_w(0xFFFFFFFF, vfe_dev->vfe_base + 0x64);
 	msm_camera_io_w_mb(0xFFFFFFFF, vfe_dev->vfe_base + 0x68);
@@ -341,9 +345,14 @@ static void msm_vfe47_process_camif_irq(struct vfe_device *vfe_dev,
 			pix_stream_count == 0) {
 			msm_isp_sof_notify(vfe_dev, VFE_PIX_0, ts);
 			if (vfe_dev->axi_data.stream_update)
+<<<<<<< HEAD
 				msm_isp_axi_stream_update(vfe_dev,
 					(1 << VFE_PIX_0));
 			msm_isp_update_framedrop_reg(vfe_dev, (1 << VFE_PIX_0));
+=======
+				msm_isp_axi_stream_update(vfe_dev);
+			msm_isp_update_framedrop_reg(vfe_dev);
+>>>>>>> 9ab3873... msm: camera: isp: Add 14 bit pipeline support in ISP
 		}
 	}
 	if (irq_status0 & (1 << 1))
@@ -449,6 +458,7 @@ static void msm_vfe47_process_reg_update(struct vfe_device *vfe_dev,
 	uint32_t irq_status0, uint32_t irq_status1,
 	struct msm_isp_timestamp *ts)
 {
+<<<<<<< HEAD
 	uint8_t input_src = 0x0;
 	if (!(irq_status0 & 0xF0))
 		return;
@@ -472,11 +482,31 @@ static void msm_vfe47_process_reg_update(struct vfe_device *vfe_dev,
 
 	if (vfe_dev->axi_data.stream_update)
 		msm_isp_axi_stream_update(vfe_dev, input_src);
+=======
+	if (!(irq_status0 & 0xF0))
+		return;
+
+	if (irq_status0 & BIT(4))
+		msm_isp_sof_notify(vfe_dev, VFE_PIX_0, ts);
+	if (irq_status0 & BIT(5))
+		msm_isp_sof_notify(vfe_dev, VFE_RAW_0, ts);
+	if (irq_status0 & BIT(6))
+		msm_isp_sof_notify(vfe_dev, VFE_RAW_1, ts);
+	if (irq_status0 & BIT(7))
+		msm_isp_sof_notify(vfe_dev, VFE_RAW_2, ts);
+
+	if (vfe_dev->axi_data.stream_update)
+		msm_isp_axi_stream_update(vfe_dev);
+>>>>>>> 9ab3873... msm: camera: isp: Add 14 bit pipeline support in ISP
 	if (atomic_read(&vfe_dev->stats_data.stats_update))
 		msm_isp_stats_stream_update(vfe_dev);
 	if (atomic_read(&vfe_dev->axi_data.axi_cfg_update))
 		msm_isp_axi_cfg_update(vfe_dev);
+<<<<<<< HEAD
 	msm_isp_update_framedrop_reg(vfe_dev, input_src);
+=======
+	msm_isp_update_framedrop_reg(vfe_dev);
+>>>>>>> 9ab3873... msm: camera: isp: Add 14 bit pipeline support in ISP
 	msm_isp_update_stats_framedrop_reg(vfe_dev);
 	msm_isp_update_error_frame_count(vfe_dev);
 
@@ -805,18 +835,26 @@ static void msm_vfe47_update_camif_state(struct vfe_device *vfe_dev,
 	if (update_state == NO_UPDATE)
 		return;
 
+<<<<<<< HEAD
 	if (update_state == ENABLE_CAMIF) {
 		val = msm_camera_io_r(vfe_dev->vfe_base + 0x5C);
 		val |= 0xF1;
 		msm_camera_io_w_mb(val, vfe_dev->vfe_base + 0x5C);
 
+=======
+	val = msm_camera_io_r(vfe_dev->vfe_base + 0x3AC);
+	if (update_state == ENABLE_CAMIF) {
+>>>>>>> 9ab3873... msm: camera: isp: Add 14 bit pipeline support in ISP
 		bus_en =
 			((vfe_dev->axi_data.
 			src_info[VFE_PIX_0].raw_stream_count > 0) ? 1 : 0);
 		vfe_en =
 			((vfe_dev->axi_data.
 			src_info[VFE_PIX_0].pix_stream_count > 0) ? 1 : 0);
+<<<<<<< HEAD
 		val = msm_camera_io_r(vfe_dev->vfe_base + 0x3AC);
+=======
+>>>>>>> 9ab3873... msm: camera: isp: Add 14 bit pipeline support in ISP
 		val &= 0xFFFFFF3F;
 		val = val | bus_en << 7 | vfe_en << 6;
 		msm_camera_io_w(val, vfe_dev->vfe_base + 0x3AC);
@@ -860,14 +898,21 @@ static void msm_vfe47_axi_cfg_wm_reg(
 	if (stream_info->frame_based)
 		val |= 0x2;
 	msm_camera_io_w(val, vfe_dev->vfe_base + wm_base + 0xC);
+<<<<<<< HEAD
 	/* WR_IMAGE_SIZE */
 	val =
 		((msm_isp_cal_word_per_line(
+=======
+	if (!stream_info->frame_based) {
+		/* WR_IMAGE_SIZE */
+		val = ((msm_isp_cal_word_per_line(
+>>>>>>> 9ab3873... msm: camera: isp: Add 14 bit pipeline support in ISP
 			stream_info->output_format,
 			stream_info->plane_cfg[plane_idx].
 			output_width)+3)/4 - 1) << 16 |
 			(stream_info->plane_cfg[plane_idx].
 			output_height - 1);
+<<<<<<< HEAD
 	msm_camera_io_w(val, vfe_dev->vfe_base + wm_base + 0x14);
 	/* WR_BUFFER_CFG */
 	val = VFE47_BURST_LEN |
@@ -875,6 +920,17 @@ static void msm_vfe47_axi_cfg_wm_reg(
 		((msm_isp_cal_word_per_line(stream_info->output_format,
 		stream_info->plane_cfg[plane_idx].
 		output_stride)+1)/2) << 16;
+=======
+		msm_camera_io_w(val, vfe_dev->vfe_base + wm_base + 0x14);
+		/* WR_BUFFER_CFG */
+		val = VFE47_BURST_LEN |
+			(stream_info->plane_cfg[plane_idx].output_height - 1) <<
+			2 |
+			((msm_isp_cal_word_per_line(stream_info->output_format,
+			stream_info->plane_cfg[plane_idx].
+			output_stride)+1)/2) << 16;
+	}
+>>>>>>> 9ab3873... msm: camera: isp: Add 14 bit pipeline support in ISP
 	msm_camera_io_w(val, vfe_dev->vfe_base + wm_base + 0x18);
 	/* WR_IRQ_SUBSAMPLE_PATTERN */
 	msm_camera_io_w(0xFFFFFFFF,
@@ -1097,9 +1153,15 @@ static int msm_vfe47_axi_halt(struct vfe_device *vfe_dev,
 	/* if any stream is waiting for update, signal complete */
 	if (vfe_dev->axi_data.stream_update) {
 		ISP_DBG("%s: complete stream update\n", __func__);
+<<<<<<< HEAD
 		msm_isp_axi_stream_update(vfe_dev, 0xF);
 		if (vfe_dev->axi_data.stream_update)
 			msm_isp_axi_stream_update(vfe_dev, 0xF);
+=======
+		msm_isp_axi_stream_update(vfe_dev);
+		if (vfe_dev->axi_data.stream_update)
+			msm_isp_axi_stream_update(vfe_dev);
+>>>>>>> 9ab3873... msm: camera: isp: Add 14 bit pipeline support in ISP
 	}
 
 	if (atomic_read(&vfe_dev->stats_data.stats_update)) {
