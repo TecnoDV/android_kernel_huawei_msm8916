@@ -233,6 +233,7 @@ struct msm8x16_wcd_priv {
 	/* mbhc module */
 	struct wcd_mbhc mbhc;
 	struct blocking_notifier_head notifier;
+	unsigned long status_mask;
 
 };
 
