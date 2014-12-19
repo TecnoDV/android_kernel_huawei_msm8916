@@ -2953,7 +2953,7 @@ static int smb1360_fg_config(struct smb1360_chip *chip)
 	 */
 	if (!(chip->workaround_flags & WRKRND_FG_CONFIG_FAIL)) {
 		if (chip->delta_soc != -EINVAL) {
-			reg = DIV_ROUND_UP(chip->delta_soc * MAX_8_BITS, 100);
+			reg = abs(((chip->delta_soc * MAX_8_BITS) / 100) - 1);
 			pr_debug("delta_soc=%d reg=%x\n", chip->delta_soc, reg);
 			rc = smb1360_write(chip, SOC_DELTA_REG, reg);
 			if (rc) {
