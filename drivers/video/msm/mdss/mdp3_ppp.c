@@ -1,4 +1,4 @@
-/* Copyright (c) 2007, 2013-2014 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2007, 2013-2015 The Linux Foundation. All rights reserved.
  * Copyright (C) 2007 Google Incorporated
  *
  * This software is licensed under the terms of the GNU General Public
@@ -125,12 +125,22 @@ int mdp3_ppp_get_img(struct mdp_img *img, struct mdp_blit_req *req,
 		struct mdp3_img_data *data)
 {
 	struct msmfb_data fb_data;
+	uint32_t stride;
+	int bpp = ppp_bpp(img->format);
+
+	if (bpp <= 0) {
+		pr_err("%s incorrect format %d\n", __func__, img->format);
+		return -EINVAL;
+	}
 
 	fb_data.flags = img->priv;
 	fb_data.memory_id = img->memory_id;
 	fb_data.offset = 0;
 
-	return mdp3_get_img(&fb_data, data);
+	stride = img->width * bpp;
+	data->padding = 16 * stride;
+
+	return mdp3_get_img(&fb_data, data, MDP3_CLIENT_PPP);
 }
 
 /* Check format */
@@ -446,7 +456,8 @@ int mdp3_calc_ppp_res(struct msm_fb_data_type *mfd,  struct blit_req_list *lreq)
 	u32 bg_read_bw = 0;
 	u32 dst_write_bw = 0;
 	u64 honest_ppp_ab = 0;
-	u32 fps;
+	u32 fps = 0;
+
 	ATRACE_BEGIN(__func__);
 	lcount = lreq->count;
 	if (lcount == 0) {
@@ -459,13 +470,18 @@ int mdp3_calc_ppp_res(struct msm_fb_data_type *mfd,  struct blit_req_list *lreq)
 		return 0;
 	}
 
-	/* Set FPS to mipi rate as currently there is no way to get this */
-	fps = panel_info->mipi.frame_rate;
-
 	for (i = 0; i < lcount; i++) {
 		req = &(lreq->req_list[i]);
 
+		if (req->fps > 0 && req->fps <= panel_info->mipi.frame_rate) {
+			if (fps == 0)
+				fps = req->fps;
+			else
+				fps = panel_info->mipi.frame_rate;
+		}
+
 		mdp3_get_bpp_info(req->src.format, &bpp);
+
 		src_read_bw = req->src_rect.w * req->src_rect.h *
 						bpp.bpp_num / bpp.bpp_den;
 		src_read_bw = mdp3_adjust_scale_factor(req,
@@ -489,7 +505,11 @@ int mdp3_calc_ppp_res(struct msm_fb_data_type *mfd,  struct blit_req_list *lreq)
 						bpp.bpp_num / bpp.bpp_den;
 		honest_ppp_ab += (src_read_bw + bg_read_bw + dst_write_bw);
 	}
-	honest_ppp_ab = honest_ppp_ab * fps;
+
+	if (fps != 0)
+		honest_ppp_ab = honest_ppp_ab * fps;
+	else
+		honest_ppp_ab = honest_ppp_ab * panel_info->mipi.frame_rate;
 
 	if (honest_ppp_ab != ppp_res.next_ab) {
 		pr_debug("bandwidth vote update for ppp: ab = %llx\n",
@@ -1204,8 +1224,8 @@ static void mdp3_ppp_blit_wq_handler(struct work_struct *work)
 						&req->src_data[i],
 						&req->dst_data[i]);
 				}
-				mdp3_put_img(&req->src_data[i]);
-				mdp3_put_img(&req->dst_data[i]);
+				mdp3_put_img(&req->src_data[i], MDP3_CLIENT_PPP);
+				mdp3_put_img(&req->dst_data[i], MDP3_CLIENT_PPP);
 			}
 		}
 		ATRACE_END("mdp3_ppp_start");
@@ -1277,7 +1297,7 @@ int mdp3_ppp_parse_req(void __user *p,
 		rc = mdp3_ppp_get_img(&req->req_list[i].dst,
 				&req->req_list[i], &req->dst_data[i]);
 		if (rc < 0 || req->dst_data[i].len == 0) {
-			mdp3_put_img(&req->src_data[i]);
+			mdp3_put_img(&req->src_data[i], MDP3_CLIENT_PPP);
 			pr_err("mdp_ppp: couldn't retrieve dest img from mem\n");
 			goto parse_err_1;
 		}
@@ -1320,8 +1340,8 @@ parse_err_2:
 	put_unused_fd(req->cur_rel_fen_fd);
 parse_err_1:
 	for (i--; i >= 0; i--) {
-		mdp3_put_img(&req->src_data[i]);
-		mdp3_put_img(&req->dst_data[i]);
+		mdp3_put_img(&req->src_data[i], MDP3_CLIENT_PPP);
+		mdp3_put_img(&req->dst_data[i], MDP3_CLIENT_PPP);
 	}
 	mdp3_ppp_deinit_buf_sync(req);
 	mutex_unlock(&ppp_stat->req_mutex);
