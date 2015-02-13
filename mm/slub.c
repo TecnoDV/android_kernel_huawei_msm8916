@@ -659,7 +659,7 @@ static void object_err(struct kmem_cache *s, struct page *page,
 	slab_panic(reason);
 }
 
-static void slab_err(struct kmem_cache *s, struct page *page,
+void object_err(struct kmem_cache *s, struct page *page,
 			const char *fmt, ...)
 {
 	va_list args;
