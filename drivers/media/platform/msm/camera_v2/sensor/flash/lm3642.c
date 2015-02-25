@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -210,13 +210,13 @@ int msm_flash_lm3642_led_release(struct msm_led_flash_ctrl_t *fctrl)
 	struct msm_camera_sensor_board_info *flashdata = NULL;
 	struct msm_camera_power_ctrl_t *power_info = NULL;
 
-	flashdata = fctrl->flashdata;
-	power_info = &flashdata->power_info;
 	LM3642_DBG("%s:%d called\n", __func__, __LINE__);
-	if (!fctrl) {
+	if (!fctrl || !fctrl->flashdata) {
 		pr_err("%s:%d fctrl NULL\n", __func__, __LINE__);
 		return -EINVAL;
 	}
+	flashdata = fctrl->flashdata;
+	power_info = &flashdata->power_info;
 
 	//clear the err and unlock IC, this function must be called before read and write register
 	msm_flash_clear_err_and_unlock(fctrl);
@@ -240,14 +240,14 @@ int msm_flash_lm3642_led_off(struct msm_led_flash_ctrl_t *fctrl)
 	struct msm_camera_sensor_board_info *flashdata = NULL;
 	struct msm_camera_power_ctrl_t *power_info = NULL;
 
-	flashdata = fctrl->flashdata;
-	power_info = &flashdata->power_info;
 	LM3642_DBG("%s:%d called\n", __func__, __LINE__);
 
-	if (!fctrl) {
+	if (!fctrl || !fctrl->flashdata) {
 		pr_err("%s:%d fctrl NULL\n", __func__, __LINE__);
 		return -EINVAL;
 	}
+	flashdata = fctrl->flashdata;
+	power_info = &flashdata->power_info;
 
 	//clear the err and unlock IC, this function must be called before read and write register
 	msm_flash_clear_err_and_unlock(fctrl);
