@@ -47,7 +47,11 @@
 			linux,reserve-contiguous-region;
 			linux,reserve-region;
 			linux,remove-completely;
+<<<<<<< HEAD
 			reg = <0x0 0x86800000 0x0 0x05700000>;
+=======
+			reg = <0x0 0x86800000 0x0 0x05600000>;
+>>>>>>> 0a9e175... ARM: dts: msm: Change modem region to 86MB for msm8939 & msm8916
 			label = "modem_adsp_mem";
 		};
 
@@ -55,7 +59,11 @@
 			linux,reserve-contiguous-region;
 			linux,reserve-region;
 			linux,remove-completely;
+<<<<<<< HEAD
 			reg = <0x0 0x8bf00000 0x0 0x0600000>;
+=======
+			reg = <0x0 0x8be00000 0x0 0x0600000>;
+>>>>>>> 0a9e175... ARM: dts: msm: Change modem region to 86MB for msm8939 & msm8916
 			label = "peripheral_mem";
 		};
 		venus_mem: venus_region@0 {
