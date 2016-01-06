@@ -32,10 +32,13 @@
 
 #define MSM_FB_ENABLE_DBGFS
 #define WAIT_FENCE_FIRST_TIMEOUT (3 * MSEC_PER_SEC)
-#define WAIT_FENCE_FINAL_TIMEOUT (10 * MSEC_PER_SEC)
-/* Display op timeout should be greater than total timeout */
-#define WAIT_DISP_OP_TIMEOUT ((WAIT_FENCE_FIRST_TIMEOUT + \
-		WAIT_FENCE_FINAL_TIMEOUT) * MDP_MAX_FENCE_FD)
+#define WAIT_FENCE_FINAL_TIMEOUT (7 * MSEC_PER_SEC)
+/* Display op timeout should be greater than the total timeout but not
+ * unreasonably large. Set to 1s more than first wait + final wait which
+ * are already quite long and proceed without any further waits. */
+#define WAIT_DISP_OP_TIMEOUT (WAIT_FENCE_FIRST_TIMEOUT + \
+		WAIT_FENCE_FINAL_TIMEOUT + 1)
+
 
 #ifndef MAX
 #define  MAX(x, y) (((x) > (y)) ? (x) : (y))
@@ -88,6 +91,19 @@ enum mdp_split_mode {
 	MDP_SPLIT_MODE_NONE,
 	MDP_SPLIT_MODE_LM,
 	MDP_SPLIT_MODE_DST,
+};
+
+/**
+ * enum mdp_mmap_type - Lists the possible mmap type in the device
+ *
+ * @MDP_FB_MMAP_NONE: Unknown type.
+ * @MDP_FB_MMAP_ION_ALLOC:   Use ION allocate a buffer for mmap
+ * @MDP_FB_MMAP_PHYSICAL_ALLOC:  Use physical buffer for mmap
+ */
+enum mdp_mmap_type {
+	MDP_FB_MMAP_NONE,
+	MDP_FB_MMAP_ION_ALLOC,
+	MDP_FB_MMAP_PHYSICAL_ALLOC,
 };
 
 struct disp_info_type_suspend {
@@ -267,8 +283,9 @@ struct msm_fb_data_type {
 #ifdef CONFIG_HUAWEI_LCD
 	u32 frame_updated;
 #endif
-	u32 wait_for_kickoff;
 	bool mdss_fb_split_stored;
+	u32 wait_for_kickoff;
+	int fb_mmap_type;
 	struct led_trigger *boot_notification_led;
 };
 
