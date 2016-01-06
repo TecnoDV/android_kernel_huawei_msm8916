@@ -60,7 +60,7 @@ static ssize_t led_brightness_store(struct device *dev,
 	return size;
 }
 
-static ssize_t led_blink_store(struct device *dev,
+/*static ssize_t led_blink_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
 {
 	struct led_classdev *led_cdev = dev_get_drvdata(dev);
@@ -77,7 +77,7 @@ static ssize_t led_blink_store(struct device *dev,
 		led_blink_set(led_cdev, &delay_on, &delay_off);
 
 	return size;
-}
+}*/
 
 static ssize_t led_max_brightness_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t size)
