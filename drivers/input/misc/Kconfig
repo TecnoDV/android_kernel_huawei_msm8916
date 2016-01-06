@@ -216,6 +216,7 @@ config SENSORS_LIS3DH
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called lis3dh_acc.
+
 config SENSORS_KIONIX
 	tristate "ROHM_KX023 3-axis digital acceleromater"
 	depends on I2C
