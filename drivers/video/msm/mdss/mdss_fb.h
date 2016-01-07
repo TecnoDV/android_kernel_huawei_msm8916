@@ -154,7 +154,8 @@ struct msm_mdp_interface {
 	int (*on_fnc)(struct msm_fb_data_type *mfd);
 	int (*off_fnc)(struct msm_fb_data_type *mfd);
 	/* called to release resources associated to the process */
-	int (*release_fnc)(struct msm_fb_data_type *mfd, bool release_all, uint32_t pid);
+	int (*release_fnc)(struct msm_fb_data_type *mfd, bool release_all,
+				uint32_t pid);
 	int (*kickoff_fnc)(struct msm_fb_data_type *mfd,
 					struct mdp_display_commit *data);
 	int (*ioctl_handler)(struct msm_fb_data_type *mfd, u32 cmd, void *arg);
@@ -242,7 +243,6 @@ struct msm_fb_data_type {
 	u32 unset_bl_level;
 	u32 bl_updated;
 	u32 bl_level_scaled;
-	u32 bl_level_prev_scaled;
 	struct mutex bl_lock;
 #ifdef CONFIG_FB_AUTO_CABC
 	struct mutex lock; 
@@ -287,6 +287,7 @@ struct msm_fb_data_type {
 #endif
 	bool mdss_fb_split_stored;
 	u32 wait_for_kickoff;
+	u32 thermal_level;
 	int fb_mmap_type;
 	struct led_trigger *boot_notification_led;
 };

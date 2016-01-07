@@ -414,6 +414,40 @@ static void mdss_fb_get_split(struct msm_fb_data_type *mfd)
 			mfd->split_fb_left, mfd->split_fb_right);
 }
 
+static ssize_t mdss_fb_get_thermal_level(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int ret;
+
+	ret = scnprintf(buf, PAGE_SIZE, "thermal_level=%d\n",
+						mfd->thermal_level);
+
+	return ret;
+}
+
+static ssize_t mdss_fb_set_thermal_level(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int rc = 0;
+	int thermal_level = 0;
+
+	rc = kstrtoint(buf, 10, &thermal_level);
+	if (rc) {
+		pr_err("kstrtoint failed. rc=%d\n", rc);
+		return rc;
+	}
+
+	pr_debug("Thermal level set to %d\n", thermal_level);
+	mfd->thermal_level = thermal_level;
+	sysfs_notify(&mfd->fbi->dev->kobj, NULL, "msm_fb_thermal_level");
+
+	return count;
+}
+
 static ssize_t mdss_mdp_show_blank_event(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -816,6 +850,8 @@ static DEVICE_ATTR(msm_fb_panel_status, S_IRUGO,
 static DEVICE_ATTR(msm_fb_src_split_info, S_IRUGO, mdss_fb_get_src_split_info,
 	NULL);
 static DEVICE_ATTR(rgb, S_IRUGO | S_IWUSR | S_IWGRP, mdss_get_rgb, mdss_set_rgb);
+static DEVICE_ATTR(msm_fb_thermal_level, S_IRUGO | S_IWUSR,
+	mdss_fb_get_thermal_level, mdss_fb_set_thermal_level);
 
 static struct attribute *mdss_fb_attrs[] = {
 	&dev_attr_msm_fb_type.attr,
@@ -832,6 +868,7 @@ static struct attribute *mdss_fb_attrs[] = {
 	&dev_attr_msm_fb_panel_status.attr,
 	&dev_attr_msm_fb_src_split_info.attr,
 	&dev_attr_rgb.attr,
+	&dev_attr_msm_fb_thermal_level.attr,
 	NULL,
 };
 
@@ -901,7 +938,6 @@ static int mdss_fb_probe(struct platform_device *pdev)
 
 	mfd->ext_ad_ctrl = -1;
 	mfd->bl_level = 0;
-	mfd->bl_level_prev_scaled = 0;
 	mfd->bl_scale = 1024;
 	mfd->bl_min_lvl = 30;
 	mfd->fb_imgType = MDP_RGBA_8888;
@@ -1272,7 +1308,6 @@ void mdss_fb_set_backlight(struct msm_fb_data_type *mfd, u32 bkl_lvl)
 			if (ret)
 				pr_err("Failed to attenuate BL\n");
 		}
-		mfd->bl_level_prev_scaled = mfd->bl_level_scaled;
 		if (!IS_CALIB_MODE_BL(mfd))
 			mdss_fb_scale_bl(mfd, &temp);
 		/*
@@ -1492,7 +1527,7 @@ static int mdss_fb_blank_sub(int blank_mode, struct fb_info *info,
 		mutex_lock(&mfd->bl_lock);
 		if (!mfd->bl_updated) {
 			mfd->bl_updated = 1;
-			mdss_fb_set_backlight(mfd, mfd->bl_level_prev_scaled);
+			mdss_fb_set_backlight(mfd, mfd->unset_bl_level);
 		}
 		mutex_unlock(&mfd->bl_lock);
 #endif
@@ -2442,8 +2477,8 @@ static int mdss_fb_release_all(struct fb_info *info, bool release_all)
 		pinfo = mdss_fb_release_file_entry(info, NULL, false);
 		if (pinfo) {
 			pr_debug("found known pid=%d reference for unknown caller pid=%d\n",
-										pinfo->pid, pid);
-						pid = pinfo->pid;
+						pinfo->pid, pid);
+			pid = pinfo->pid;
 			mfd->ref_cnt--;
 			pinfo->ref_cnt--;
 			pm_runtime_put(info->dev);
@@ -2469,17 +2504,20 @@ static int mdss_fb_release_all(struct fb_info *info, bool release_all)
 			mfd->op_enable);
 		if (ret) {
 			pr_err("can't turn off fb%d! rc=%d current process=%s pid=%d known pid=%d\n",
-							      mfd->index, ret, task->comm, current->tgid, pid);
+			      mfd->index, ret, task->comm, current->tgid, pid);
 			return ret;
 		}
 		atomic_set(&mfd->ioctl_ref_cnt, 0);
 		} else if (release_needed) {
 		pr_debug("current process=%s pid=%d known pid=%d mfd->ref=%d\n",
 			task->comm, current->tgid, pid, mfd->ref_cnt);
+
 		if (mfd->mdp.release_fnc) {
 			ret = mfd->mdp.release_fnc(mfd, false, pid);
 			/* display commit is needed to release resources */
 			if (ret)
+				pr_err("error releasing fb%d for current pid=%d known pid=%d\n",
+					mfd->index, current->tgid, pid);
 				mdss_fb_pan_display(&mfd->fbi->var, mfd->fbi);
 		}
 	}
