@@ -73,6 +73,7 @@ void *restart_flag_addr = NULL;
 static bool scm_pmic_arbiter_disable_supported;
 /* Download mode master kill-switch */
 static void __iomem *msm_ps_hold;
+static phys_addr_t tcsr_boot_misc_detect;
 
 #ifdef CONFIG_MSM_DLOAD_MODE
 #define EDL_MODE_PROP "qcom,msm-imem-emergency_download_mode"
@@ -103,6 +104,29 @@ static int panic_prep_restart(struct notifier_block *this,
 static struct notifier_block panic_blk = {
 	.notifier_call	= panic_prep_restart,
 };
+
+/*int scm_set_dload_mode(int arg1, int arg2)
+{
+	struct scm_desc desc = {
+		.args[0] = arg1,
+		.args[1] = arg2,
+		.arginfo = SCM_ARGS(2),
+	};
+
+	if (!scm_dload_supported) {
+		if (tcsr_boot_misc_detect)
+			return scm_io_write(tcsr_boot_misc_detect, arg1);
+
+		return 0;
+	}
+
+	if (!is_scm_armv8())
+		return scm_call_atomic2(SCM_SVC_BOOT, SCM_DLOAD_CMD, arg1,
+					arg2);
+
+	return scm_call2_atomic(SCM_SIP_FNID(SCM_SVC_BOOT, SCM_DLOAD_CMD),
+				&desc);
+}*/
 
 static void set_dload_mode(int on)
 {
@@ -490,6 +514,10 @@ static int msm_restart_probe(struct platform_device *pdev)
 	msm_ps_hold = devm_ioremap_resource(dev, mem);
 	if (IS_ERR(msm_ps_hold))
 		return PTR_ERR(msm_ps_hold);
+
+	mem = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	if (mem)
+		tcsr_boot_misc_detect = mem->start;
 
 	pm_power_off = do_msm_poweroff;
 	arm_pm_restart = do_msm_restart;
