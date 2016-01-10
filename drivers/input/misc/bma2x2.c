@@ -77,7 +77,7 @@
 #define SLOPE_Z_INDEX               7
 #define BMA2X2_RANGE_SET            3 /* +/- 2G */
 #define BMA2X2_RANGE_SHIFT          4 /* shift 4 bits for 2G */
-#define BMA2X2_BW_SET               12 /* 125HZ  */
+#define BMA2X2_BW_SET               13 /* 250HZ  */
 
 #define I2C_RETRY_DELAY()           usleep_range(1000, 2000)
 /* wait 2ms for calibration ready */
