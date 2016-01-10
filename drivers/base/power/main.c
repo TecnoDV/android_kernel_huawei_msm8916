@@ -503,7 +503,6 @@ static int device_resume_noirq(struct device *dev, pm_message_t state)
 static void dpm_resume_noirq(pm_message_t state)
 {
 	ktime_t starttime = ktime_get();
-	char suspend_abort[MAX_SUSPEND_ABORT_LEN];
 
 	mutex_lock(&dpm_list_mtx);
 	while (!list_empty(&dpm_noirq_list)) {
