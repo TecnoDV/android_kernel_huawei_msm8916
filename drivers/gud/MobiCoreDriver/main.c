@@ -1489,6 +1489,7 @@ error:
 /*
  * This function removes this device driver from the Linux device manager .
  */
+/*static void mobicore_exit(void)*/
 static void mobicore_exit(void)
 {
 	MCDRV_DBG_VERBOSE(mcd, "enter");
