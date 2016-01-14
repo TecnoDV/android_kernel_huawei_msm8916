@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2008-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1149,7 +1149,10 @@ int smd_pkt_open(struct inode *inode, struct file *file)
 			smd_pkt_devp->ch = NULL;
 		}
 
-		if (r < 0) {
+		if (r == -ERESTARTSYS) {
+			pr_info_ratelimited("%s: wait on smd_pkt_dev id:%d OPEN interrupted\n",
+				__func__, smd_pkt_devp->i);
+		} else if (r < 0) {
 			pr_err("%s: wait on smd_pkt_dev id:%d OPEN event failed rc:%d\n",
 				__func__, smd_pkt_devp->i, r);
 		} else if (!smd_pkt_devp->is_open) {
