@@ -63,10 +63,10 @@ struct pn547_dev	{
 	unsigned int 		firm_gpio;
 	unsigned int		irq_gpio;
 	unsigned int		clk_req_gpio;
-	bool			irq_enabled;
-	spinlock_t		irq_enabled_lock;
+	bool				irq_enabled;
+	spinlock_t			irq_enabled_lock;
 	bool			do_reading;
-	struct wake_lock   	wl;
+	struct wake_lock   wl;
 	bool cancel_read;
 };
 

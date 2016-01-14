@@ -80,9 +80,9 @@ static struct sensors_classdev kionix_acc_cdev = {
 	.version = 1,
 	.handle = SENSORS_ACCELERATION_HANDLE,
 	.type = SENSOR_TYPE_ACCELEROMETER,
-	.max_range = "156.8",
-	.resolution = "0.01",
-	.sensor_power = "0.01",
+	.max_range = "156.8",	/* 16g */
+	.resolution = "0.0156",	/* 15.63mg */
+	.sensor_power = "0.13",	/* typical value */
 	.min_delay = 5000,
 	.delay_msec = 200,
 	.fifo_reserved_event_count = 0,
@@ -255,14 +255,15 @@ static int kionix_i2c_read(struct kionix_accel_driver *acceld, u8 addr, u8 *buf,
 
 /* move these check exception functions to kionix_accel_monitor.c*/
 
-static int kionix_strtok(const char *buf, size_t count, char **token, const int token_nr)
+static int kionix_strtok(const char *buf,
+ 			 size_t count, char **token, const int token_nr)
 {
-	char *buf2 = (char *)kzalloc((count + 1) * sizeof(char), GFP_KERNEL);
+	char *buf2 = kzalloc((count + 1) * sizeof(char), GFP_KERNEL);
 	char **token2 = token;
 	unsigned int num_ptr = 0, num_nr = 0, num_neg = 0;
 	int i = 0, start = 0, end = (int)count;
 
-	strcpy(buf2, buf);
+	strlcpy(buf2, buf, sizeof(buf2));
 
 	/* We need to breakup the string into separate chunks in order for kstrtoint
 	 * or strict_strtol to parse them without returning an error. Stop when the end of
@@ -277,35 +278,44 @@ static int kionix_strtok(const char *buf, size_t count, char **token, const int 
 					num_ptr--;
 					num_nr++;
 				}
-				*token2 = (char *)kzalloc((num_nr + 2) * sizeof(char), GFP_KERNEL);
-				strncpy(*token2, (const char *)(buf2 + num_ptr), (size_t) num_nr);
-				*(*token2+num_nr) = '\n';
+				*token2 =
+				    kzalloc((num_nr + 2) * sizeof(char),
+						    GFP_KERNEL);
+				strlcpy(*token2, (const char *)(buf2 + num_ptr),
+					(size_t) num_nr);
+				*(*token2 + num_nr) = '\n';
 				i++;
 				token2++;
 				/* Reset */
 				num_ptr = num_nr = 0;
 			}
-			/* This indicates that there is a pending negative sign in the string */
+			/* This indicates that there is a pending
+			negative sign in the string */
 			num_neg = 1;
 		}
 		/* We found a numeric */
 		else if((*(buf2 + start) >= '0') && (*(buf2 + start) <= '9')) {
-			/* If the previous char(s) are not numeric, set num_ptr to current char */
+			/* If the previous char(s) are not numeric,
+			set num_ptr to current char */
 			if(num_nr < 1)
 				num_ptr = start;
 			num_nr++;
 		}
 		/* We found an unwanted character */
 		else {
-			/* Previous char(s) are numeric, so we store their value first before proceed */
+			/* Previous char(s) are numeric, so we 
+			store their value first before proceed */
 			if(num_nr > 0) {
 				if(num_neg) {
 					num_ptr--;
 					num_nr++;
 				}
-				*token2 = (char *)kzalloc((num_nr + 2) * sizeof(char), GFP_KERNEL);
-				strncpy(*token2, (const char *)(buf2 + num_ptr), (size_t) num_nr);
-				*(*token2+num_nr) = '\n';
+				*token2 =
+				    kzalloc((num_nr + 2) * sizeof(char),
+						    GFP_KERNEL);
+				strlcpy(*token2, (const char *)(buf2 + num_ptr),
+					(size_t) num_nr);
+				*(*token2 + num_nr) = '\n';
 				i++;
 				token2++;
 			}
@@ -589,7 +599,9 @@ static int kionix_accel_update_odr(struct kionix_accel_driver *acceld, unsigned 
 
 static void kionix_accel_work(struct work_struct *work)
 {
-	struct kionix_accel_driver *acceld = container_of((struct delayed_work *)work,	struct kionix_accel_driver, accel_work);
+	struct kionix_accel_driver *acceld =
+	    container_of((struct delayed_work *)work,
+			   struct kionix_accel_driver, accel_work);
 
 	acceld->kionix_accel_report_accel_data(acceld);
 
@@ -651,23 +663,25 @@ static int kionix_accel_enable(struct kionix_accel_driver *acceld)
 
 		atomic_set(&acceld->accel_suspend_continue, 0);
 
-		/* Make sure that the sensor had successfully resumed before enabling it */
+	/* Make sure that the sensor had successfully resumed before enabling it */
+	if(atomic_read(&acceld->accel_suspended) == 1) {
+		KIONIX_INFO("%s: waiting for resume", __func__);
+		remaining =
+		    wait_event_interruptible_timeout(acceld->wqh_suspend, \
+		    atomic_read(&acceld->accel_suspended) == 0, \
+		    msecs_to_jiffies
+		    (KIONIX_ACCEL_EARLYSUSPEND_TIMEOUT));
+
 		if(atomic_read(&acceld->accel_suspended) == 1) {
-			KIONIX_INFO("%s: waiting for resume", __func__);
-			remaining = wait_event_interruptible_timeout(acceld->wqh_suspend, \
-					atomic_read(&acceld->accel_suspended) == 0, \
-					msecs_to_jiffies(KIONIX_ACCEL_EARLYSUSPEND_TIMEOUT));
-
-			if(atomic_read(&acceld->accel_suspended) == 1) {
-				KIONIX_ERR("%s: timeout waiting for resume", __func__);
-				err = -ETIME;
-				goto exit;
-			}
-		}
-
-		err = kionix_acc_config_regulator(acceld,true);
-		if(err)
+			KIONIX_ERR("%s: timeout waiting for resume", __func__);
+			err = -ETIME;
 			goto exit;
+		}
+	}
+
+	err = kionix_acc_config_regulator(acceld,true);
+	if(err)
+		goto exit;
 
 		/*when enable the device, enter operate mode*/
 		if (pinctrl_select_state(acceld->pinctrl, acceld->pin_default))
@@ -750,9 +764,12 @@ static int  kionix_accel_setup_input_device(struct kionix_accel_driver *acceld)
 	input_set_drvdata(input_dev, acceld);
 
 	__set_bit(EV_ABS, input_dev->evbit);
-	input_set_abs_params(input_dev, ABS_X, -ACCEL_G_MAX, ACCEL_G_MAX, ACCEL_FUZZ, ACCEL_FLAT);
-	input_set_abs_params(input_dev, ABS_Y, -ACCEL_G_MAX, ACCEL_G_MAX, ACCEL_FUZZ, ACCEL_FLAT);
-	input_set_abs_params(input_dev, ABS_Z, -ACCEL_G_MAX, ACCEL_G_MAX, ACCEL_FUZZ, ACCEL_FLAT);
+	input_set_abs_params(input_dev, ABS_X, -ACCEL_G_MAX, ACCEL_G_MAX,
+			     ACCEL_FUZZ, ACCEL_FLAT);
+	input_set_abs_params(input_dev, ABS_Y, -ACCEL_G_MAX, ACCEL_G_MAX,
+			     ACCEL_FUZZ, ACCEL_FLAT);
+	input_set_abs_params(input_dev, ABS_Z, -ACCEL_G_MAX, ACCEL_G_MAX,
+			     ACCEL_FUZZ, ACCEL_FLAT);
 
 
 	input_dev->name = KIONIX_ACCEL_INPUT_NAME;
@@ -782,8 +799,9 @@ static ssize_t attr_get_enable(struct device *dev,
 /**
 *	 Allow users to enable/disable the device
 */
-static ssize_t attr_set_enable(struct device *dev, struct device_attribute *attr,
-						const char *buf, size_t count)
+static ssize_t attr_set_enable(struct device *dev,
+			       struct device_attribute *attr,
+			       const char *buf, size_t count)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct kionix_accel_driver *acceld = i2c_get_clientdata(client);
@@ -903,11 +921,9 @@ exit:
 	return (err < 0) ? err : count;
 }
 
-/**
-*	 Returns the direction of device
-*/
+/*  Returns the direction of device */
 static ssize_t attr_get_direct(struct device *dev,
-				struct device_attribute *attr, char *buf)
+			       struct device_attribute *attr, char *buf)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct kionix_accel_driver *acceld = i2c_get_clientdata(client);
@@ -956,7 +972,8 @@ static ssize_t attr_set_direct(struct device *dev, struct device_attribute *attr
 		#endif
 
 		if(direction < 1 || direction > 8)
-			KIONIX_ERR("%s: invalid direction = %d", __func__, (unsigned int) direction);
+			KIONIX_ERR("%s: invalid direction = %d", __func__,
+				  (unsigned int) direction);
 
 		else {
 			acceld->accel_pdata->accel_direction = (u8) direction;
@@ -995,7 +1012,7 @@ static ssize_t attr_get_data(struct device *dev,
 *	 Returns the calibration value of the device
 */
 static ssize_t attr_get_cali(struct device *dev,
-				struct device_attribute *attr, char *buf)
+			     struct device_attribute *attr, char *buf)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct kionix_accel_driver *acceld = i2c_get_clientdata(client);
@@ -1009,19 +1026,23 @@ static ssize_t attr_get_cali(struct device *dev,
 
 	read_unlock(&acceld->rwlock_accel_data);
 
-	return snprintf(buf, 128,"%d %d %d\n", calibration[0], calibration[1], calibration[2]);
+	return snprintf(buf, 128,"%d %d %d\n", calibration[0],
+			calibration[1],
+			calibration[2]);
 }
 
 /**
 *	 Allow users to change the calibration value of the device
 */
-static ssize_t attr_set_cali(struct device *dev, struct device_attribute *attr,
-						const char *buf, size_t count)
+static ssize_t attr_set_cali(struct device *dev,
+			     struct device_attribute *attr,
+			     const char *buf, size_t count)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct kionix_accel_driver *acceld = i2c_get_clientdata(client);
 	struct input_dev *input_dev = acceld->input_dev;
-	const int cali_count = 3; /* How many calibration that we expect to get from the string */
+/* How many calibration that we expect to get from the string */
+	const int cali_count = 3;
 	char **buf2;
 	long calibration[cali_count];
 	int err = 0, i = 0;
@@ -1697,11 +1718,11 @@ static struct i2c_driver kionix_accel_driver = {
 		.name	= KIONIX_ACCEL_NAME,
 		.owner	= THIS_MODULE,
 		.of_match_table = kionix_acc_match_table,
-	},
-	.probe = kionix_accel_probe,
-	.remove = kionix_accel_remove,
-	.suspend = kionix_acc_suspend,
-	.resume = kionix_acc_resume,
+		},
+	.probe 		= kionix_accel_probe,
+	.remove 	= kionix_accel_remove,
+	.suspend 	= kionix_acc_suspend,
+	.resume  	= kionix_acc_resume,
 	.id_table	= kionix_accel_id,
 
 };
