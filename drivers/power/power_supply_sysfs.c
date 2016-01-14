@@ -205,6 +205,7 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(type),
 	POWER_SUPPLY_ATTR(scope),
 	POWER_SUPPLY_ATTR(system_temp_level),
+	POWER_SUPPLY_ATTR(num_system_temp_levels),
 #ifdef CONFIG_HUAWEI_KERNEL
 	POWER_SUPPLY_ATTR(running_test_status),
 #endif
