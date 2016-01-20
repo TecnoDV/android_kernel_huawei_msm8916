@@ -33,6 +33,10 @@
 #include "synaptics_i2c_rmi4.h"
 #include <linux/input/mt.h>
 
+#ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
+#include <linux/input/doubletap2wake.h>
+#endif
+
 #define DRIVER_NAME "synaptics_rmi4_i2c"
 #define INPUT_PHYS_NAME "synaptics_rmi4_i2c/input0"
 #define DEBUGFS_DIR_NAME "ts_debug"
@@ -3671,6 +3675,15 @@ static int fb_notifier_callback(struct notifier_block *self,
 	int *blank;
 	struct synaptics_rmi4_data *rmi4_data =
 		container_of(self, struct synaptics_rmi4_data, fb_notif);
+		
+#ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
+ 	bool prevent_sleep = (dt2w_switch > 0);
+ 			if (prevent_sleep) {
+ 				pr_debug("suspend avoided!\n");
+ 				synaptics_dsx_enable_wakeup_source(rmi4_data, true);
+ 				return 0;
+ 			} else {
+ #endif
 
 	if (evdata && evdata->data && event == FB_EVENT_BLANK &&
 		rmi4_data && rmi4_data->i2c_client) {
@@ -3680,6 +3693,9 @@ static int fb_notifier_callback(struct notifier_block *self,
 		else if (*blank == FB_BLANK_POWERDOWN)
 			synaptics_rmi4_suspend(&(rmi4_data->input_dev->dev));
 	}
+#ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
+	}
+#endif
 
 	return 0;
 }
